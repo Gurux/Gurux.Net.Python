@@ -1,0 +1,14 @@
+Metadata-Version: 2.1
+Name: gurux-net
+Version: 1.0.1
+Summary: Gurux network media is used to commmunication with TCP/IP or UDP connections.
+Home-page: https://github.com/gurux/gurux.net.python
+Author: Gurux Ltd
+Author-email: gurux@gurux.org
+License: UNKNOWN
+Description: Gurux network media is used to commmunication with TCP/IP or UDP connections.
+Platform: UNKNOWN
+Classifier: Programming Language :: Python :: 3
+Classifier: License :: OSI Approved :: GNU General Public License v2 (GPLv2)
+Classifier: Operating System :: OS Independent
+Description-Content-Type: text/markdown

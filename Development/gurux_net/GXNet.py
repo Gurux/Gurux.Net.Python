@@ -1,0 +1,367 @@
+#
+#  --------------------------------------------------------------------------
+#   Gurux Ltd
+#
+#
+#
+#  Filename: $HeadURL$
+#
+#  Version: $Revision$,
+#                $Date$
+#                $Author$
+#
+#  Copyright (c) Gurux Ltd
+#
+# ---------------------------------------------------------------------------
+#
+#   DESCRIPTION
+#
+#  This file is a part of Gurux Device Framework.
+#
+#  Gurux Device Framework is Open Source software; you can redistribute it
+#  and/or modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; version 2 of the License.
+#  Gurux Device Framework is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU General Public License for more details.
+#
+#  More information of Gurux products: http://www.gurux.org
+#
+#  This code is licensed under the GNU General Public License v2.
+#  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
+# ---------------------------------------------------------------------------
+import socket
+import threading
+from gurux_common.enums import TraceLevel, MediaState, TraceTypes
+from gurux_common.IGXMedia import IGXMedia
+from gurux_common.MediaStateEventArgs import MediaStateEventArgs
+from gurux_common.TraceEventArgs import TraceEventArgs
+from gurux_common.PropertyChangedEventArgs import PropertyChangedEventArgs
+from gurux_common.ReceiveParameters import ReceiveParameters
+from gurux_common.ReceiveEventArgs import ReceiveEventArgs
+from gurux_common.IGXMediaListener import IGXMediaListener
+from .enums.NetworkType import NetworkType
+from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
+
+# pylint: disable=too-many-public-methods, too-many-instance-attributes
+class GXNet(IGXMedia):
+
+    def __init__(self, networkType=NetworkType.TCP, name=None, portNo=0):
+        """
+         Client Constructor.
+
+         networkType :  Used protocol.
+         name : Host name.
+         portNo : Client port number.
+        """
+        self.__receiveDelay = 0
+        self.__asyncWaitTime = 0
+        ###Used protocol.###
+        self.__protocol = networkType
+        ###Host name.###
+        self.__host_name = name
+        ###Used port.###
+        self.__port = portNo
+        ###Is server or client.###
+        self.__server = False
+        ###Created socket.###
+        self.__socket = None
+        ###Amount of sent bytes.###
+        self.__bytesSent = 0
+        self.__bytesReceived = 0
+        ###Synchronous counter.###
+        self.__synchronous = 0
+        ###Trace level.###
+        self.__trace = TraceLevel.OFF
+        ###Used end of packet.###
+        self.__eop = None
+        ###Synchronous data handler.###
+        self.__syncBase = _GXSynchronousMediaBase(1024)
+        ###Event listeners.
+        self.__listeners = []
+        self.__netListeners = []
+        self.__lock = threading.Lock()
+        self.__thread = None
+
+    def __getTrace(self):
+        return self.__trace
+
+    def __setTrace(self, value):
+        self.__trace = value
+        self.__syncBase.trace = value
+
+    trace = property(__getTrace, __setTrace)
+    """Trace level."""
+
+    def addListener(self, listener: IGXMediaListener):
+        self.__listeners.append(listener)
+
+    def removeListener(self, listener: IGXMediaListener):
+        self.__listeners.remove(listener)
+
+    def __notifyPropertyChanged(self, info):
+        """Notify that property has changed."""
+        for it in self.__listeners:
+            it.onPropertyChanged(self, PropertyChangedEventArgs(info))
+
+    def __notifyClientConnected(self, e):
+        """Notify that client has connected."""
+        for it in self.__netListeners:
+            it.onClientConnected(self, e)
+
+        if int(self.trace) >= int(TraceLevel.INFO):
+            for it in self.__listeners:
+                it.onTrace(self, TraceEventArgs(TraceTypes.INFO, "Client connected."))
+
+    def __notifyClientDisconnected(self, e):
+        """Notifies clients that client is disconnected."""
+        for it in self.__netListeners:
+            it.onClientDisconnected(self, e)
+
+        if int(self.__trace) >= int(TraceLevel.INFO):
+            for it in self.__listeners:
+                it.onTrace(self, TraceEventArgs(TraceTypes.INFO, "Client disconnected."))
+
+    def __notifyError(self, ex):
+        """Notify clients from error occurred."""
+        for it in self.__listeners:
+            it.onError(self, ex)
+            if int(self.__trace) >= int(TraceLevel.ERROR):
+                it.onTrace(self, TraceEventArgs(TraceTypes.ERROR, ex))
+
+    def __notifyReceived(self, e):
+        """Notify clients from new data received."""
+        for it in self.__listeners:
+            it.onReceived(self, e)
+
+    def __notifyTrace(self, e):
+        """Notify clients from trace events."""
+        for it in self.__listeners:
+            it.onTrace(self, e)
+
+    def send(self, data, receiver=None):
+        if not self.__socket:
+            raise Exception("Invalid connection.")
+
+        if self.__trace == TraceLevel.VERBOSE:
+            self.__notifyTrace(TraceEventArgs(TraceTypes.SENT, data))
+
+        #Reset last position if end of packet is used.
+        with self.__syncBase.getSync():
+            self.__syncBase.resetLastPosition()
+
+        self.__socket.sendall(data)
+        self.__bytesSent += len(data)
+
+    def __notifyMediaStateChange(self, state):
+        ###Notify client from media state change.
+        for it in self.__listeners:
+            if int(self.__trace) >= int(TraceLevel.ERROR):
+                it.onTrace(self, TraceEventArgs(TraceTypes.INFO, state))
+            it.onMediaStateChange(self, MediaStateEventArgs(state))
+
+    #Handle received data.
+    def __handleReceivedData(self, buff, info):
+        if not buff:
+            return
+        eop = self.eop
+        self.__bytesReceived += len(buff)
+        totalCount = 0
+        if self.getIsSynchronous:
+            arg = None
+            with self.__syncBase.getSync():
+                self.__syncBase.appendData(buff, 0, len(buff))
+                #Search end of packet if it is given.
+                if eop:
+                    tmp = bytearray(1)
+                    tmp[0] = eop
+                    totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
+                if totalCount != -1:
+                    if self.trace == TraceLevel.VERBOSE:
+                        arg = TraceEventArgs(TraceTypes.RECEIVED, buff, 0, totalCount + 1)
+                    self.__syncBase.setReceived()
+            if arg:
+                self.__notifyTrace(arg)
+        else:
+            self.__syncBase.resetReceivedSize()
+            if self.trace == TraceLevel.VERBOSE:
+                self.__notifyTrace(TraceEventArgs(TraceTypes.RECEIVED, buff))
+            e = ReceiveEventArgs(buff, info)
+            self.__notifyReceived(e)
+
+    #pylint: disable=broad-except
+    def __listenerThread(self):
+        while self.__socket:
+            try:
+                data = self.__socket.recv(1000)
+                self.__handleReceivedData(data, self.__socket.getpeername())
+            except Exception:
+                pass
+
+    def open(self):
+        """Opens the connection. Protocol, Port and HostName must be set, before
+        calling the Open method."""
+        self.close()
+        try:
+            with self.__syncBase.getSync():
+                self.__syncBase.resetLastPosition()
+
+            self.__notifyMediaStateChange(MediaState.OPENING)
+            #Create a stream-based, TCP socket using the InterNetwork //
+            #Address Family.
+            if self.protocol == NetworkType.TCP:
+                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.__socket.connect((self.__host_name, self.__port))
+            else:
+                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.__socket.connect((self.__host_name, self.__port))
+            self.__notifyMediaStateChange(MediaState.OPEN)
+            self.__thread = threading.Thread(target=self.__listenerThread)
+            self.__thread.start()
+        except Exception as e:
+            self.close()
+            raise e
+
+    def close(self):
+        if self.__socket:
+            self.__notifyMediaStateChange(MediaState.CLOSING)
+            self.__socket.close()
+            self.__socket = None
+            try:
+                self.__thread.join()
+                self.__thread = None
+            except Exception:
+                pass
+            self.__notifyMediaStateChange(MediaState.CLOSED)
+            self.__bytesSent = 0
+            self.__syncBase.resetReceivedSize()
+
+    def isOpen(self):
+        return self.__socket is not None
+
+    def __getProtocol(self):
+        return self.__protocol
+    def __setProtocol(self, value):
+        self.__protocol = value
+
+    protocol = property(__getProtocol, __setProtocol)
+    """Protocol."""
+
+    def __getHostName(self):
+        return self.__host_name
+
+    def __setHostName(self, value):
+        self.__host_name = value
+
+    hostName = property(__getHostName, __setHostName)
+    """Host name."""
+
+    def __getPort(self):
+        """Retrieves or sets the host or server port number."""
+        return self.__port
+
+    def __setPort(self, value):
+        """Retrieves or sets the host or server port number."""
+        self.__port = value
+
+    port = property(__getPort, __setPort)
+    """Port number."""
+
+    def receive(self, args: ReceiveParameters):
+        return self.__syncBase.receive(args)
+
+    def getBytesSent(self):
+        """Sent byte count."""
+        return self.__bytesSent
+
+    def getBytesReceived(self):
+        """Received byte count."""
+        return self.__bytesReceived
+
+    def resetByteCounters(self):
+        """Resets BytesReceived and BytesSent counters."""
+        self.__bytesSent = 0
+        self.__bytesReceived = 0
+
+    def getSettings(self):
+        """Media settings as a XML string."""
+        sb = ""
+        nl = "\r\n"
+        if self.__host_name:
+            sb += "<IP>"
+            sb += self.__host_name
+            sb += "</IP>"
+            sb += nl
+        if self.__port != 0:
+            sb += "<Port>"
+            sb += str(self.__port)
+            sb += "</Port>"
+            sb += nl
+
+        if self.__protocol != NetworkType.TCP:
+            sb += "<Protocol>"
+            sb += str(int(self.__protocol))
+            sb += "</Protocol>"
+            sb += nl
+        return sb
+
+    def setSettings(self, value: str):
+        #Reset to default values.
+        self.__host_name = ""
+        self.__port = 0
+        self.__protocol = NetworkType.TCP
+
+
+    def copy(self, target):
+        self.__port = target.port
+        self.__host_name = target.hostName
+        self.__protocol = target.protocol
+
+    def getName(self):
+        tmp = self.__host_name + " " + self.__port
+        if self.__protocol == NetworkType.UDP:
+            tmp += "UDP"
+        else:
+            tmp += "TCP/IP"
+        return tmp
+
+    def getMediaType(self):
+        return "Net"
+
+    def getSynchronous(self):
+        return self.__lock
+
+    #pylint: disable=no-member
+    def getIsSynchronous(self):
+        return self.__lock.locked()
+
+    def resetSynchronousBuffer(self):
+        with self.__syncBase.getSync():
+            self.__syncBase.resetReceivedSize()
+
+    def validate(self):
+        if self.__port == 0:
+            raise Exception("Invalid port name.")
+        if not self.hostName:
+            raise Exception("Invalid host name.")
+
+    def __getEop(self):
+        return self.__eop
+
+    def __setEop(self, value):
+        self.__eop = value
+
+    eop = property(__getEop, __setEop)
+
+    def getReceiveDelay(self):
+        return self.__receiveDelay
+
+    def setReceiveDelay(self, value):
+        self.__receiveDelay = value
+
+    def getAsyncWaitTime(self):
+        return self.__asyncWaitTime
+
+    def setAsyncWaitTime(self, value):
+        self.__asyncWaitTime = value
