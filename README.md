@@ -16,6 +16,7 @@ You can get source codes from http://www.github.com/gurux or intall package:
 
 ```python
 pip install gurux-common
+pip install gurux-net
 ```
 
 Simple example
@@ -47,7 +48,7 @@ cl.open()
 Data is send with send command:
 
 ```python
-cl.send("Hello World!");
+cl.send("Hello World!")
 ```
 In default mode received data is coming as asynchronously from OnReceived event.
 Event listener is added like this:

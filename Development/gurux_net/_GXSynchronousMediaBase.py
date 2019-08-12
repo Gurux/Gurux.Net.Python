@@ -41,20 +41,20 @@ class _GXSynchronousMediaBase:
 
         length : receive buffer size.
         """
-        ###Trace level.
+        #Trace level.
         self.trace = TraceLevel.OFF
-        ###Occurred exception.
+        #Occurred exception.
         self.exception = None
-        ###Received bytes.
+        #Received bytes.
         self.__receivedBuffer = bytearray(length)
-        ###Received event.
+        #Received event.
         self.__receivedEvent = threading.Event()
-        ###Synchronous object.
+        #Synchronous object.
         self.__sync = threading.RLock()
-        ###Amount of received bytes.
+        #Amount of received bytes.
         self.__receivedSize = 0
-        ###Position where end of packet was last time search.  This is used to
-        ###improve searching.
+        #Position where end of packet was last time search.  This is used to
+        #improve searching.
         self.__lastPosition = 0
 
     def resetLastPosition(self):
@@ -193,6 +193,7 @@ class _GXSynchronousMediaBase:
                     isReceived = self.__receivedEvent.wait()
                 elif waitTime != 0:
                     isReceived = self.__receivedEvent.wait(waitTime / 1000)
+                self.__receivedEvent.clear()
 
             if self.exception:
                 raise Exception(self.exception)
