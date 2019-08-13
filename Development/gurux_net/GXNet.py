@@ -151,7 +151,14 @@ class GXNet(IGXMedia):
         with self.__syncBase.getSync():
             self.__syncBase.resetLastPosition()
 
-        self.__socket.sendall(data)
+        if isinstance(data, str):
+            data = data.encode()
+        elif isinstance(data, bytearray):
+            data = bytes(data)
+        else:
+            raise ValueError("Invalid data value.")
+
+        ret = self.__socket.sendall(data)
         self.__bytesSent += len(data)
 
     def __notifyMediaStateChange(self, state):
@@ -208,13 +215,11 @@ class GXNet(IGXMedia):
                 self.__syncBase.resetLastPosition()
 
             self.__notifyMediaStateChange(MediaState.OPENING)
-            #Create a stream-based, TCP socket using the InterNetwork //
-            #Address Family.
             if self.protocol == NetworkType.TCP:
                 self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 self.__socket.connect((self.__host_name, self.__port))
             else:
-                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
                 self.__socket.connect((self.__host_name, self.__port))
             self.__notifyMediaStateChange(MediaState.OPEN)
             self.__thread = threading.Thread(target=self.__listenerThread)
@@ -226,6 +231,7 @@ class GXNet(IGXMedia):
     def close(self):
         if self.__socket:
             self.__notifyMediaStateChange(MediaState.CLOSING)
+            self.__socket.shutdown(socket.SHUT_RDWR)
             self.__socket.close()
             self.__socket = None
             try:
