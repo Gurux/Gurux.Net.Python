@@ -9,7 +9,7 @@ setuptools.setup(
     author="Gurux Ltd",
     author_email="gurux@gurux.org",
     description="Gurux network media is used to commmunication with TCP/IP or UDP connections.",
-    long_description="Gurux network media is used to commmunication with TCP/IP or UDP connections.",
+    long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/gurux/gurux.net.python",
     packages=setuptools.find_packages(),
