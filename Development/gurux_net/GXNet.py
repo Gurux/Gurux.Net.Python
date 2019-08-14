@@ -38,9 +38,7 @@ from gurux_common.IGXMedia import IGXMedia
 from gurux_common.MediaStateEventArgs import MediaStateEventArgs
 from gurux_common.TraceEventArgs import TraceEventArgs
 from gurux_common.PropertyChangedEventArgs import PropertyChangedEventArgs
-from gurux_common.ReceiveParameters import ReceiveParameters
 from gurux_common.ReceiveEventArgs import ReceiveEventArgs
-from gurux_common.IGXMediaListener import IGXMediaListener
 from .enums.NetworkType import NetworkType
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
 
@@ -94,10 +92,10 @@ class GXNet(IGXMedia):
     trace = property(__getTrace, __setTrace)
     """Trace level."""
 
-    def addListener(self, listener: IGXMediaListener):
+    def addListener(self, listener):
         self.__listeners.append(listener)
 
-    def removeListener(self, listener: IGXMediaListener):
+    def removeListener(self, listener):
         self.__listeners.remove(listener)
 
     def __notifyPropertyChanged(self, info):
@@ -158,7 +156,7 @@ class GXNet(IGXMedia):
         else:
             raise ValueError("Invalid data value.")
 
-        ret = self.__socket.sendall(data)
+        self.__socket.sendall(data)
         self.__bytesSent += len(data)
 
     def __notifyMediaStateChange(self, state):
@@ -172,7 +170,6 @@ class GXNet(IGXMedia):
     def __handleReceivedData(self, buff, info):
         if not buff:
             return
-        eop = self.eop
         self.__bytesReceived += len(buff)
         totalCount = 0
         if self.getIsSynchronous:
@@ -180,9 +177,8 @@ class GXNet(IGXMedia):
             with self.__syncBase.getSync():
                 self.__syncBase.appendData(buff, 0, len(buff))
                 #Search end of packet if it is given.
-                if eop:
-                    tmp = bytearray(1)
-                    tmp[0] = eop
+                if self.eop:
+                    tmp = bytearray(self.eop)
                     totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
                 if totalCount != -1:
                     if self.trace == TraceLevel.VERBOSE:
@@ -274,7 +270,7 @@ class GXNet(IGXMedia):
     port = property(__getPort, __setPort)
     """Port number."""
 
-    def receive(self, args: ReceiveParameters):
+    def receive(self, args):
         return self.__syncBase.receive(args)
 
     def getBytesSent(self):
@@ -312,7 +308,7 @@ class GXNet(IGXMedia):
             sb += nl
         return sb
 
-    def setSettings(self, value: str):
+    def setSettings(self, value):
         #Reset to default values.
         self.__host_name = ""
         self.__port = 0

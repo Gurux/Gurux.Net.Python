@@ -35,6 +35,7 @@ from enum import Enum
 
 class NetworkType(Enum):
     """Determines the valid network protocols to be used in data transfer."""
+    #pylint: disable=too-few-public-methods
 
     #UDP protocol.
     UDP = 0
