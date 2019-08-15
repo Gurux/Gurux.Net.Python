@@ -1,45 +1,36 @@
-See An [Gurux](http://www.gurux.org/ "Gurux") for an overview.
-
-Join the Gurux Community or follow [@Gurux](https://twitter.com/guruxorg "@Gurux") for project updates.
-
-With gurux.net component you can send data easily syncronously or asyncronously using TCP or UDP connection.
-
-Open Source GXNet media component, made by Gurux Ltd, is a part of GXMedias set of media components, which programming interfaces help you implement communication by chosen connection type. Gurux media components also support the following connection types: serial port.
-
-For more info check out [Gurux](http://www.gurux.org/ "Gurux").
-
-We are updating documentation on Gurux web page. 
-
-If you have problems you can ask your questions in Gurux [Forum](http://www.gurux.org/forum).
-
-Note!
-Minimum requirements for Gurux project is Python 3.6. This is because projects are depending on Flag and IntFlag.
-
-You can get source codes from http://www.github.com/gurux or intall package: 
-
-```python
-pip install gurux-common
-pip install gurux-net
-```
-
-Simple example
-=========================== 
-Before use you must set following settings:
-* HostName
-* Port
-* Protocol
-
-It is also good to add listener to listen following events.
-* onError
-* onReceived
-* onMediaStateChange
-
-and if in server mode following events might be important.
-* onClientConnected
-* onClientDisconnected                
-
-```python
-
+#
+#  --------------------------------------------------------------------------
+#   Gurux Ltd
+#
+#
+#
+#  Filename: $HeadURL$
+#
+#  Version: $Revision$,
+#                $Date$
+#                $Author$
+#
+#  Copyright (c) Gurux Ltd
+#
+# ---------------------------------------------------------------------------
+#
+#   DESCRIPTION
+#
+#  This file is a part of Gurux Device Framework.
+#
+#  Gurux Device Framework is Open Source software; you can redistribute it
+#  and/or modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; version 2 of the License.
+#  Gurux Device Framework is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+#  See the GNU General Public License for more details.
+#
+#  More information of Gurux products: http://www.gurux.org
+#
+#  This code is licensed under the GNU General Public License v2.
+#  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
+# ---------------------------------------------------------------------------
 import time
 from gurux_common import ReceiveParameters
 from gurux_common import IGXMediaListener
@@ -60,9 +51,9 @@ class sampleclient(IGXMediaListener):
         #Start to listen events from the media.
         media.addListener(self)
 
-        #Update port to demonstrate onPropertyChanged event.
+        #Update port here to call onPropertyChanged event.
         media.port = 1000
-        #Show all traces. In default traces are not sent.
+        #Show all traces.
         media.trace = TraceLevel.VERBOSE
         #Set EOP for the media.
         media.eop = eop
@@ -139,5 +130,3 @@ class sampleclient(IGXMediaListener):
 
 if __name__ == '__main__':
     sampleclient()
-
-```

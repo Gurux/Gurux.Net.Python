@@ -149,20 +149,14 @@ class GXNet(IGXMedia):
         with self.__syncBase.getSync():
             self.__syncBase.resetLastPosition()
 
-        if isinstance(data, str):
-            data = data.encode()
-        elif isinstance(data, bytearray):
-            data = bytes(data)
-        else:
-            raise ValueError("Invalid data value.")
-
+        data = _GXSynchronousMediaBase.toBytes(data)
         self.__socket.sendall(data)
         self.__bytesSent += len(data)
 
     def __notifyMediaStateChange(self, state):
         ###Notify client from media state change.
         for it in self.__listeners:
-            if int(self.__trace) >= int(TraceLevel.ERROR):
+            if self.__trace >= TraceLevel.ERROR:
                 it.onTrace(self, TraceEventArgs(TraceTypes.INFO, state))
             it.onMediaStateChange(self, MediaStateEventArgs(state))
 
@@ -172,13 +166,13 @@ class GXNet(IGXMedia):
             return
         self.__bytesReceived += len(buff)
         totalCount = 0
-        if self.getIsSynchronous:
+        if self.getIsSynchronous():
             arg = None
             with self.__syncBase.getSync():
                 self.__syncBase.appendData(buff, 0, len(buff))
                 #Search end of packet if it is given.
                 if self.eop:
-                    tmp = bytearray(self.eop)
+                    tmp = _GXSynchronousMediaBase.toBytes(self.eop)
                     totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
                 if totalCount != -1:
                     if self.trace == TraceLevel.VERBOSE:
@@ -190,7 +184,7 @@ class GXNet(IGXMedia):
             self.__syncBase.resetReceivedSize()
             if self.trace == TraceLevel.VERBOSE:
                 self.__notifyTrace(TraceEventArgs(TraceTypes.RECEIVED, buff))
-            e = ReceiveEventArgs(buff, info)
+            e = ReceiveEventArgs(buff, str(info[0]) + ":" + str(info[1]))
             self.__notifyReceived(e)
 
     #pylint: disable=broad-except
@@ -198,7 +192,9 @@ class GXNet(IGXMedia):
         while self.__socket:
             try:
                 data = self.__socket.recv(1000)
-                self.__handleReceivedData(data, self.__socket.getpeername())
+                if data:
+                    data = _GXSynchronousMediaBase.toBytes(data)
+                    self.__handleReceivedData(data, self.__socket.getpeername())
             except Exception:
                 pass
 
@@ -245,7 +241,9 @@ class GXNet(IGXMedia):
     def __getProtocol(self):
         return self.__protocol
     def __setProtocol(self, value):
-        self.__protocol = value
+        if self.__protocol != value:
+            self.__protocol = value
+            self.__notifyPropertyChanged("protocol")
 
     protocol = property(__getProtocol, __setProtocol)
     """Protocol."""
@@ -254,18 +252,21 @@ class GXNet(IGXMedia):
         return self.__host_name
 
     def __setHostName(self, value):
-        self.__host_name = value
+        if self.__host_name != value:
+            self.__host_name = value
+            self.__notifyPropertyChanged("hostName")
 
     hostName = property(__getHostName, __setHostName)
     """Host name."""
 
     def __getPort(self):
-        """Retrieves or sets the host or server port number."""
         return self.__port
 
     def __setPort(self, value):
-        """Retrieves or sets the host or server port number."""
-        self.__port = value
+        if self.__port != value:
+            self.__port = value
+            self.__notifyPropertyChanged("port")
+
 
     port = property(__getPort, __setPort)
     """Port number."""
