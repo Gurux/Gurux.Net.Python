@@ -31,9 +31,14 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
-from enum import Enum
+#pylint: disable=broad-except,no-name-in-module
+try:
+    from enum import Enum
+    __base = Enum
+except Exception:
+    __base = object
 
-class NetworkType(Enum):
+class NetworkType(__base):
     """Determines the valid network protocols to be used in data transfer."""
     #pylint: disable=too-few-public-methods
 

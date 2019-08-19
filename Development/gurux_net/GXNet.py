@@ -33,6 +33,7 @@
 # ---------------------------------------------------------------------------
 import socket
 import threading
+import traceback
 from gurux_common.enums import TraceLevel, MediaState, TraceTypes
 from gurux_common.IGXMedia import IGXMedia
 from gurux_common.MediaStateEventArgs import MediaStateEventArgs
@@ -193,10 +194,12 @@ class GXNet(IGXMedia):
             try:
                 data = self.__socket.recv(1000)
                 if data:
-                    data = _GXSynchronousMediaBase.toBytes(data)
+                    #Convert data to bytearray because 2.7 handles bytes as a string.
+                    #This is causing problems with non-ascii chars.
+                    data = bytearray(data)
                     self.__handleReceivedData(data, self.__socket.getpeername())
             except Exception:
-                pass
+                traceback.print_exc()
 
     def open(self):
         """Opens the connection. Protocol, Port and HostName must be set, before
@@ -223,9 +226,13 @@ class GXNet(IGXMedia):
     def close(self):
         if self.__socket:
             self.__notifyMediaStateChange(MediaState.CLOSING)
-            self.__socket.shutdown(socket.SHUT_RDWR)
-            self.__socket.close()
-            self.__socket = None
+            try:
+                #This will fail if connection is closed on server side.
+                self.__socket.shutdown(socket.SHUT_RDWR)
+                self.__socket.close()
+                self.__socket = None
+            except Exception:
+                pass
             try:
                 self.__thread.join()
                 self.__thread = None

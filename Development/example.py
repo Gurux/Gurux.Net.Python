@@ -45,7 +45,7 @@ class sampleclient(IGXMediaListener):
 
     def __init__(self):
         #Define End Of Packet char.
-        eop = '\r'
+        eop = 0x7e
         #Make connection using TCP/IP to localhost.
         media = GXNet(NetworkType.TCP, "localhost", 0)
         #Start to listen events from the media.
@@ -70,7 +70,7 @@ class sampleclient(IGXMediaListener):
             with media.getSynchronous():
                 media.send("Hello world!")
                 #Send EOP
-                media.send('\r')
+                media.send(eop)
                 ret = media.receive(r)
                 if ret:
                     print(str(r.reply.decode("ascii")))
@@ -78,7 +78,8 @@ class sampleclient(IGXMediaListener):
                     raise Exception("Failed to receive reply from the server.")
             ############################
             #Send async data.
-            media.send("Server !\r")
+            media.send("Server !")
+            media.send(eop)
             #Wait 1 second to receive reply from the server.
             time.sleep(1)
         except Exception as ex:
