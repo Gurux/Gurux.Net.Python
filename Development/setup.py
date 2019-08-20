@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="gurux_net",
-    version="1.0.6",
+    version="1.0.7",
     author="Gurux Ltd",
     author_email="gurux@gurux.org",
     description="Gurux network media is used to commmunication with TCP/IP or UDP connections.",
