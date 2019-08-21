@@ -198,12 +198,13 @@ class GXNet(IGXMedia):
                     #This is causing problems with non-ascii chars.
                     data = bytearray(data)
                     self.__handleReceivedData(data, self.__socket.getpeername())
-            except ConnectionResetError as e:
+            except ConnectionResetError:
                 #Server has close the connection.
                 self.close()
                 break
-            except Exception as e:
-                traceback.print_exc()
+            except Exception:
+                if self.__socket:
+                    traceback.print_exc()
 
     def open(self):
         """Opens the connection. Protocol, Port and HostName must be set, before
