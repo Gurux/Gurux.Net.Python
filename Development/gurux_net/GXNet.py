@@ -150,7 +150,8 @@ class GXNet(IGXMedia):
         with self.__syncBase.getSync():
             self.__syncBase.resetLastPosition()
 
-        data = _GXSynchronousMediaBase.toBytes(data)
+        if not isinstance(data, bytes):
+            data = bytes(_GXSynchronousMediaBase.toBytes(data))
         self.__socket.sendall(data)
         self.__bytesSent += len(data)
 
