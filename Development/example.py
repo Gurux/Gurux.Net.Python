@@ -47,7 +47,7 @@ class sampleclient(IGXMediaListener):
         #Define End Of Packet char.
         eop = 0x7e
         #Make connection using TCP/IP to localhost.
-        media = GXNet(NetworkType.TCP, "localhost", 0)
+        media = GXNet(NetworkType.TCP, "::1", 0)
         #Start to listen events from the media.
         media.addListener(self)
 

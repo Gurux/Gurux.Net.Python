@@ -207,6 +207,14 @@ class GXNet(IGXMedia):
                 if self.__socket:
                     traceback.print_exc()
 
+    @classmethod
+    def __getInet(cls, addr):
+        try:
+            socket.inet_aton(addr)
+            return socket.AF_INET
+        except socket.error:
+            return socket.AF_INET6
+
     def open(self):
         """Opens the connection. Protocol, Port and HostName must be set, before
         calling the Open method."""
@@ -217,11 +225,11 @@ class GXNet(IGXMedia):
 
             self.__notifyMediaStateChange(MediaState.OPENING)
             if self.protocol == NetworkType.TCP:
-                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.__socket = socket.socket(GXNet.__getInet(self.__host_name), socket.SOCK_STREAM)
                 self.__socket.connect((self.__host_name, self.__port))
             else:
                 self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.__socket.connect((self.__host_name, self.__port))
+                self.__socket.connect((GXNet.__getInet(self.__host_name), self.__port))
             self.__notifyMediaStateChange(MediaState.OPEN)
             self.__thread = threading.Thread(target=self.__listenerThread)
             self.__thread.start()
