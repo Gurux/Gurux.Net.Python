@@ -209,11 +209,9 @@ class GXNet(IGXMedia):
 
     @classmethod
     def __getInet(cls, addr):
-        try:
-            socket.inet_aton(addr)
-            return socket.AF_INET
-        except socket.error:
+        if addr.find(":") != -1:
             return socket.AF_INET6
+        return socket.AF_INET
 
     def open(self):
         """Opens the connection. Protocol, Port and HostName must be set, before
