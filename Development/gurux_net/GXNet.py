@@ -226,8 +226,8 @@ class GXNet(IGXMedia):
                 self.__socket = socket.socket(GXNet.__getInet(self.__host_name), socket.SOCK_STREAM)
                 self.__socket.connect((self.__host_name, self.__port))
             else:
-                self.__socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-                self.__socket.connect((GXNet.__getInet(self.__host_name), self.__port))
+                self.__socket = socket.socket(GXNet.__getInet(self.__host_name), socket.SOCK_DGRAM)
+                self.__socket.connect((self.__host_name, self.__port))
             self.__notifyMediaStateChange(MediaState.OPEN)
             self.__thread = threading.Thread(target=self.__listenerThread)
             self.__thread.start()
