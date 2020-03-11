@@ -7,8 +7,8 @@
 #  Filename: $HeadURL$
 #
 #  Version: $Revision$,
-#                   $Date$
-#                   $Author$
+#                $Date$
+#                $Author$
 #
 #  Copyright (c) Gurux Ltd
 #
@@ -31,6 +31,9 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
-from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
-from ._NetReceiveEventArgs import _NetReceiveEventArgs
-from .GXNet import GXNet
+from gurux_common.ReceiveEventArgs import ReceiveEventArgs
+
+class _NetReceiveEventArgs(ReceiveEventArgs):
+    def __init__(self, data=None, senderInfo=None, socket=None):
+        ReceiveEventArgs.__init__(self, data, senderInfo)
+        self.socket = socket

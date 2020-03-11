@@ -39,9 +39,9 @@ from gurux_common.IGXMedia import IGXMedia
 from gurux_common.MediaStateEventArgs import MediaStateEventArgs
 from gurux_common.TraceEventArgs import TraceEventArgs
 from gurux_common.PropertyChangedEventArgs import PropertyChangedEventArgs
-from gurux_common.ReceiveEventArgs import ReceiveEventArgs
 from .enums.NetworkType import NetworkType
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
+from ._NetReceiveEventArgs import _NetReceiveEventArgs
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
 class GXNet(IGXMedia):
@@ -63,7 +63,7 @@ class GXNet(IGXMedia):
         ###Used port.###
         self.__port = portNo
         ###Is server or client.###
-        self.__server = False
+        self.server = False
         ###Created socket.###
         self.__socket = None
         ###Amount of sent bytes.###
@@ -82,6 +82,9 @@ class GXNet(IGXMedia):
         self.__netListeners = []
         self.__lock = threading.Lock()
         self.__thread = None
+        self.__aThread = None
+        #Is IPv6 used.  Default is False (IPv4).
+        self.useIPv6 = False
 
     def __getTrace(self):
         return self.__trace
@@ -152,7 +155,11 @@ class GXNet(IGXMedia):
 
         if not isinstance(data, bytes):
             data = bytes(_GXSynchronousMediaBase.toBytes(data))
-        self.__socket.sendall(data)
+
+        if isinstance(receiver, _NetReceiveEventArgs):
+            receiver.socket.sendall(data)
+        else:
+            self.__socket.sendall(data)
         self.__bytesSent += len(data)
 
     def __notifyMediaStateChange(self, state):
@@ -163,7 +170,7 @@ class GXNet(IGXMedia):
             it.onMediaStateChange(self, MediaStateEventArgs(state))
 
     #Handle received data.
-    def __handleReceivedData(self, buff, info):
+    def __handleReceivedData(self, buff, s):
         if not buff:
             return
         self.__bytesReceived += len(buff)
@@ -186,29 +193,53 @@ class GXNet(IGXMedia):
             self.__syncBase.resetReceivedSize()
             if self.trace == TraceLevel.VERBOSE:
                 self.__notifyTrace(TraceEventArgs(TraceTypes.RECEIVED, buff))
-            e = ReceiveEventArgs(buff, str(info[0]) + ":" + str(info[1]))
+            info = s.getpeername()
+            e = _NetReceiveEventArgs(buff, str(info[0]) + ":" + str(info[1]), s)
             self.__notifyReceived(e)
 
     #pylint: disable=broad-except
-    def __listenerThread(self):
-        while self.__socket:
+    def __listenerThread(self, s):
+        while s:
             try:
-                data = self.__socket.recv(1000)
+                data = s.recv(1000)
                 if data:
-                    #Convert data to bytearray because 2.7 handles bytes as a string.
+                    #Convert data to bytearray because 2.7 handles bytes as a
+                    #string.
                     #This is causing problems with non-ascii chars.
                     data = bytearray(data)
-                    self.__handleReceivedData(data, self.__socket.getpeername())
+                    self.__handleReceivedData(data, s)
+                elif self.server:
+                    self.__notifyClientDisconnected(s.getpeername())
+                    break
             except ConnectionResetError:
-                #Server has close the connection.
-                self.close()
+                if not self.server:
+                    #Server has close the connection.
+                    self.close()
                 break
             except Exception:
                 if self.__socket:
                     traceback.print_exc()
+                else:
+                    break
 
-    @classmethod
-    def __getInet(cls, addr):
+    #pylint: disable=broad-except
+    def __acceptThread(self):
+        while self.__socket:
+            try:
+                # accept connections from outside
+                (clientsocket, address) = self.__socket.accept()
+                self.__notifyClientConnected(address)
+                self.__thread = threading.Thread(target=self.__listenerThread, args=(clientsocket,))
+                self.__thread.start()
+            except Exception:
+                if self.__socket:
+                    traceback.print_exc()
+
+    def __getInet(self, addr):
+        if not addr:
+            if self.useIPv6:
+                return socket.AF_INET6
+            return socket.AF_INET
         if addr.find(":") != -1:
             return socket.AF_INET6
         return socket.AF_INET
@@ -223,14 +254,25 @@ class GXNet(IGXMedia):
 
             self.__notifyMediaStateChange(MediaState.OPENING)
             if self.protocol == NetworkType.TCP:
-                self.__socket = socket.socket(GXNet.__getInet(self.__host_name), socket.SOCK_STREAM)
-                self.__socket.connect((self.__host_name, self.__port))
+                if self.server:
+                    self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_STREAM)
+                    if self.__host_name:
+                        self.__socket.bind((self.__host_name, self.__port))
+                    else:
+                        self.__socket.bind((socket.gethostname(), self.__port))
+                    self.__socket.listen(5)
+                    self.__aThread = threading.Thread(target=self.__acceptThread)
+                    self.__aThread.start()
+                else:
+                    self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_STREAM)
+                    self.__socket.connect((self.__host_name, self.__port))
             else:
-                self.__socket = socket.socket(GXNet.__getInet(self.__host_name), socket.SOCK_DGRAM)
+                self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_DGRAM)
                 self.__socket.connect((self.__host_name, self.__port))
             self.__notifyMediaStateChange(MediaState.OPEN)
-            self.__thread = threading.Thread(target=self.__listenerThread)
-            self.__thread.start()
+            if not self.server or self.protocol == NetworkType.UDP:
+                self.__thread = threading.Thread(target=self.__listenerThread, args=(self.__socket,))
+                self.__thread.start()
         except Exception as e:
             self.close()
             raise e
