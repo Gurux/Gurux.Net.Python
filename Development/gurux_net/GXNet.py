@@ -282,15 +282,24 @@ class GXNet(IGXMedia):
             self.__notifyMediaStateChange(MediaState.CLOSING)
             try:
                 #This will fail if connection is closed on server side.
-                tmp = self.__socket
-                self.__socket = None
-                tmp.shutdown(socket.SHUT_RDWR)
-                tmp.close()
+                if self.__socket:
+                    tmp = self.__socket
+                    self.__socket = None
+                    if not self.server:
+                        tmp.shutdown(socket.SHUT_RDWR)
+                    tmp.close()
             except Exception:
                 pass
             try:
-                self.__thread.join()
-                self.__thread = None
+                if self.__thread:
+                    self.__thread.join()
+                    self.__thread = None
+            except Exception:
+                pass
+            try:
+                if self.__aThread:
+                    self.__aThread.join()
+                    self.__aThread = None
             except Exception:
                 pass
             self.__notifyMediaStateChange(MediaState.CLOSED)
@@ -432,8 +441,7 @@ class GXNet(IGXMedia):
         self.__asyncWaitTime = value
 
     def __str__(self):
+        tmp = self.__protocol.name
         if self.server:
-            tmp = "(Server) "
-        else:
-            tmp = ""
-        return tmp + self.__protocol.name + " " + self.__host_name + ":" + str(self.__port)
+            tmp = tmp + " Server "
+        return tmp + self.__host_name + ":" + str(self.__port)
