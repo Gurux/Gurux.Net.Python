@@ -47,10 +47,11 @@ class sampleclient(IGXMediaListener):
         #Define End Of Packet char.
         eop = 0x7e
         #Make connection using TCP/IP to localhost.
-        media = GXNet(NetworkType.TCP, "::1", 0)
+        #Use ::1 if you want to use IP v6 address.
+        media = GXNet(NetworkType.TCP, "localhost", 0)
         #Start to listen events from the media.
         media.addListener(self)
-
+        print(str(media))
         #Update port here to call onPropertyChanged event.
         media.port = 1000
         #Show all traces.

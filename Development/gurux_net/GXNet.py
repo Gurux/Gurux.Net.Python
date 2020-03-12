@@ -430,3 +430,10 @@ class GXNet(IGXMedia):
 
     def setAsyncWaitTime(self, value):
         self.__asyncWaitTime = value
+
+    def __str__(self):
+        if self.server:
+            tmp = "(Server) "
+        else:
+            tmp = ""
+        return tmp + self.__protocol.name + " " + self.__host_name + ":" + str(self.__port)
