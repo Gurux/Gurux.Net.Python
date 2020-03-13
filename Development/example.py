@@ -83,7 +83,7 @@ class sampleclient(IGXMediaListener):
             media.send(eop)
             #Wait 1 second to receive reply from the server.
             time.sleep(1)
-        except Exception as ex:
+        except (KeyboardInterrupt, SystemExit, Exception) as ex:
             print(ex)
         media.close()
         media.removeListener(self)
