@@ -444,4 +444,8 @@ class GXNet(IGXMedia):
         tmp = self.__protocol.name
         if self.server:
             tmp = tmp + " Server "
-        return tmp + self.__host_name + ":" + str(self.__port)
+        if self.__host_name:
+            tmp = tmp + self.__host_name
+        elif self.server:
+            tmp = tmp + socket.gethostname()
+        return tmp + ":" + str(self.__port)
