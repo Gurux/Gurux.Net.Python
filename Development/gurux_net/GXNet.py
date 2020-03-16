@@ -441,9 +441,12 @@ class GXNet(IGXMedia):
         self.__asyncWaitTime = value
 
     def __str__(self):
-        tmp = self.__protocol.name
+        if self.__protocol == NetworkType.TCP:
+            tmp = "TCP "
+        else:
+            tmp = "UDP "
         if self.server:
-            tmp = tmp + " Server "
+            tmp = tmp + "Server "
         if self.__host_name:
             tmp = tmp + self.__host_name
         elif self.server:
