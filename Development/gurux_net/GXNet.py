@@ -69,8 +69,6 @@ class GXNet(IGXMedia):
         ###Amount of sent bytes.###
         self.__bytesSent = 0
         self.__bytesReceived = 0
-        ###Synchronous counter.###
-        self.__synchronous = 0
         ###Trace level.###
         self.__trace = TraceLevel.OFF
         ###Used end of packet.###
@@ -86,9 +84,11 @@ class GXNet(IGXMedia):
         #Is IPv6 used.  Default is False (IPv4).
         self.useIPv6 = False
 
+    #pylint: disable=unused-private-member
     def __getTrace(self):
         return self.__trace
 
+    #pylint: disable=unused-private-member
     def __setTrace(self, value):
         self.__trace = value
         self.__syncBase.trace = value
