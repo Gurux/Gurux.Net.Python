@@ -229,7 +229,7 @@ class _GXSynchronousMediaBase:
                         foundPosition += len(terminator)
 
         #If terminator is not given read only bytes that are needed.
-        if nSize == 0:
+        if nSize == 0 and foundPosition != -1:
             foundPosition = args.count
         return foundPosition
 
