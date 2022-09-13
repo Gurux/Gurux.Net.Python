@@ -229,7 +229,7 @@ class GXNet(IGXMedia):
                 # accept connections from outside
                 (clientsocket, address) = self.__socket.accept()
                 self.__notifyClientConnected(address)
-                self.__thread = threading.Thread(target=self.__listenerThread, args=(clientsocket,))
+                self.__thread = threading.Thread(target=self.__listenerThread, args=(clientsocket,), daemon=True)
                 self.__thread.start()
             except Exception:
                 if self.__socket:
@@ -261,7 +261,7 @@ class GXNet(IGXMedia):
                     else:
                         self.__socket.bind((socket.gethostname(), self.__port))
                     self.__socket.listen(5)
-                    self.__aThread = threading.Thread(target=self.__acceptThread)
+                    self.__aThread = threading.Thread(target=self.__acceptThread, daemon=True)
                     self.__aThread.start()
                 else:
                     self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_STREAM)
@@ -271,7 +271,7 @@ class GXNet(IGXMedia):
                 self.__socket.connect((self.__host_name, self.__port))
             self.__notifyMediaStateChange(MediaState.OPEN)
             if not self.server or self.protocol == NetworkType.UDP:
-                self.__thread = threading.Thread(target=self.__listenerThread, args=(self.__socket,))
+                self.__thread = threading.Thread(target=self.__listenerThread, args=(self.__socket,), daemon=True)
                 self.__thread.start()
         except Exception as e:
             self.close()
