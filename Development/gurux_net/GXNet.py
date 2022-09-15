@@ -199,7 +199,7 @@ class GXNet(IGXMedia):
 
     #pylint: disable=broad-except
     def __listenerThread(self, s):
-        while s:
+        while self.__socket and s:
             try:
                 data = s.recv(1000)
                 if data:
