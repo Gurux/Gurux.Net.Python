@@ -31,10 +31,30 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
-from gurux_common.ReceiveEventArgs import ReceiveEventArgs
+import abc
 
-# pylint: disable=too-few-public-methods
-class _NetReceiveEventArgs(ReceiveEventArgs):
-    def __init__(self, data=None, senderInfo=None, socket=None):
-        ReceiveEventArgs.__init__(self, data, senderInfo)
-        self.socket = socket
+ABC = abc.ABCMeta("ABC", (object,), {"__slots__": ()})
+
+
+class IGXServerListener(ABC):
+    """
+    The server uses this interface to notify client connections.
+    """
+
+    __metaclass__ = abc.ABCMeta
+    """Network Server component will notify events throught this interface."""
+
+    @abc.abstractmethod
+    def onClientConnected(self, sender, e):
+        """Client has establish the connection for the network component.
+
+        sender : The source of the event.
+        e : Event arguments.
+        """
+
+    @abc.abstractmethod
+    def onClientDisconnected(self, sender, e):
+        """The client connection for the network component is terminated.
+        sender : The source of the event.
+        e : Event arguments.
+        """

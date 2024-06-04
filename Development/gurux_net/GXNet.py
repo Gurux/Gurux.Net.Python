@@ -39,23 +39,29 @@ from gurux_common.IGXMedia import IGXMedia
 from gurux_common.MediaStateEventArgs import MediaStateEventArgs
 from gurux_common.TraceEventArgs import TraceEventArgs
 from gurux_common.PropertyChangedEventArgs import PropertyChangedEventArgs
+from gurux_common import IGXMediaListener
 from .enums.NetworkType import NetworkType
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
 from ._NetReceiveEventArgs import _NetReceiveEventArgs
+from .IGXServerListener import IGXServerListener
+from ._GXNetConnectionEventArgs import _GXNetConnectionEventArgs
+
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
 class GXNet(IGXMedia):
+    """
+    The GXNet component determines methods that make the communication possible using Internet.
+    See help in http://www.gurux.org/Gurux.Net
+    """
 
     def __init__(self, networkType=NetworkType.TCP, name=None, portNo=0):
         """
-         Client Constructor.
+        Client Constructor.
 
-         networkType :  Used protocol.
-         name : Host name.
-         portNo : Client port number.
+        networkType :  Used protocol.
+        name : Host name.
+        portNo : Client port number.
         """
-        self.__receiveDelay = 0
-        self.__asyncWaitTime = 0
         ###Used protocol.###
         self.__protocol = networkType
         ###Host name.###
@@ -67,8 +73,8 @@ class GXNet(IGXMedia):
         ###Created socket.###
         self.__socket = None
         ###Amount of sent bytes.###
-        self.__bytesSent = 0
-        self.__bytesReceived = 0
+        self.__bytes_sent = 0
+        self.__bytes_received = 0
         ###Trace level.###
         self.__trace = TraceLevel.OFF
         ###Used end of packet.###
@@ -81,14 +87,14 @@ class GXNet(IGXMedia):
         self.__lock = threading.Lock()
         self.__thread = None
         self.__aThread = None
-        #Is IPv6 used.  Default is False (IPv4).
+        # Is IPv6 used.  Default is False (IPv4).
         self.useIPv6 = False
 
-    #pylint: disable=unused-private-member
+    # pylint: disable=unused-private-member
     def __getTrace(self):
         return self.__trace
 
-    #pylint: disable=unused-private-member
+    # pylint: disable=unused-private-member
     def __setTrace(self, value):
         self.__trace = value
         self.__syncBase.trace = value
@@ -97,10 +103,16 @@ class GXNet(IGXMedia):
     """Trace level."""
 
     def addListener(self, listener):
-        self.__listeners.append(listener)
+        if isinstance(listener, IGXMediaListener):
+            self.__listeners.append(listener)
+        if isinstance(listener, IGXServerListener):
+            self.__netListeners.append(listener)
 
     def removeListener(self, listener):
-        self.__listeners.remove(listener)
+        if isinstance(listener, IGXMediaListener):
+            self.__listeners.remove(listener)
+        if isinstance(listener, IGXServerListener):
+            self.__netListeners.remove(listener)
 
     def __notifyPropertyChanged(self, info):
         """Notify that property has changed."""
@@ -123,7 +135,9 @@ class GXNet(IGXMedia):
 
         if int(self.__trace) >= int(TraceLevel.INFO):
             for it in self.__listeners:
-                it.onTrace(self, TraceEventArgs(TraceTypes.INFO, "Client disconnected."))
+                it.onTrace(
+                    self, TraceEventArgs(TraceTypes.INFO, "Client disconnected.")
+                )
 
     def __notifyError(self, ex):
         """Notify clients from error occurred."""
@@ -144,12 +158,12 @@ class GXNet(IGXMedia):
 
     def send(self, data, receiver=None):
         if not self.__socket:
-            raise Exception("Invalid connection.")
+            raise ValueError("Invalid connection.")
 
         if self.__trace == TraceLevel.VERBOSE:
             self.__notifyTrace(TraceEventArgs(TraceTypes.SENT, data))
 
-        #Reset last position if end of packet is used.
+        # Reset last position if end of packet is used.
         with self.__syncBase.getSync():
             self.__syncBase.resetLastPosition()
 
@@ -160,7 +174,7 @@ class GXNet(IGXMedia):
             receiver.socket.sendall(data)
         else:
             self.__socket.sendall(data)
-        self.__bytesSent += len(data)
+        self.__bytes_sent += len(data)
 
     def __notifyMediaStateChange(self, state):
         ###Notify client from media state change.
@@ -169,23 +183,27 @@ class GXNet(IGXMedia):
                 it.onTrace(self, TraceEventArgs(TraceTypes.INFO, state))
             it.onMediaStateChange(self, MediaStateEventArgs(state))
 
-    #Handle received data.
+    # Handle received data.
     def __handleReceivedData(self, buff, s):
         if not buff:
             return
-        self.__bytesReceived += len(buff)
+        self.__bytes_received += len(buff)
         totalCount = 0
         if self.getIsSynchronous():
             arg = None
             with self.__syncBase.getSync():
                 self.__syncBase.appendData(buff, 0, len(buff))
-                #Search end of packet if it is given.
+                # Search end of packet if it is given.
                 if self.eop:
                     tmp = _GXSynchronousMediaBase.toBytes(self.eop)
-                    totalCount = _GXSynchronousMediaBase.indexOf(buff, tmp, 0, len(buff))
+                    totalCount = _GXSynchronousMediaBase.indexOf(
+                        buff, tmp, 0, len(buff)
+                    )
                 if totalCount != -1:
                     if self.trace == TraceLevel.VERBOSE:
-                        arg = TraceEventArgs(TraceTypes.RECEIVED, buff, 0, totalCount + 1)
+                        arg = TraceEventArgs(
+                            TraceTypes.RECEIVED, buff, 0, totalCount + 1
+                        )
                     self.__syncBase.setReceived()
             if arg:
                 self.__notifyTrace(arg)
@@ -197,23 +215,26 @@ class GXNet(IGXMedia):
             e = _NetReceiveEventArgs(buff, str(info[0]) + ":" + str(info[1]), s)
             self.__notifyReceived(e)
 
-    #pylint: disable=broad-except
+    # pylint: disable=broad-except
     def __listenerThread(self, s):
         while self.__socket and s:
             try:
                 data = s.recv(1000)
                 if data:
-                    #Convert data to bytearray because 2.7 handles bytes as a
-                    #string.
-                    #This is causing problems with non-ascii chars.
+                    # Convert data to bytearray because 2.7 handles bytes as a
+                    # string.
+                    # This is causing problems with non-ascii chars.
                     data = bytearray(data)
                     self.__handleReceivedData(data, s)
                 elif self.server:
-                    self.__notifyClientDisconnected(s.getpeername())
+                    arg = _GXNetConnectionEventArgs(
+                        s.getpeername()[0] + ":" + str(s.getpeername()[1]), s
+                    )
+                    self.__notifyClientDisconnected(arg)
                     break
             except ConnectionResetError:
                 if not self.server:
-                    #Server has close the connection.
+                    # Server has close the connection.
                     self.close()
                 break
             except Exception:
@@ -222,14 +243,19 @@ class GXNet(IGXMedia):
                 else:
                     break
 
-    #pylint: disable=broad-except
+    # pylint: disable=broad-except
     def __acceptThread(self):
         while self.__socket:
             try:
                 # accept connections from outside
                 (clientsocket, address) = self.__socket.accept()
-                self.__notifyClientConnected(address)
-                self.__thread = threading.Thread(target=self.__listenerThread, args=(clientsocket,))
+                arg = _GXNetConnectionEventArgs(
+                    address[0] + ":" + str(address[1]), clientsocket
+                )
+                self.__notifyClientConnected(arg)
+                self.__thread = threading.Thread(
+                    target=self.__listenerThread, args=(clientsocket,)
+                )
                 self.__thread.start()
             except Exception:
                 if self.__socket:
@@ -255,7 +281,9 @@ class GXNet(IGXMedia):
             self.__notifyMediaStateChange(MediaState.OPENING)
             if self.protocol == NetworkType.TCP:
                 if self.server:
-                    self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_STREAM)
+                    self.__socket = socket.socket(
+                        self.__getInet(self.__host_name), socket.SOCK_STREAM
+                    )
                     if self.__host_name:
                         self.__socket.bind((self.__host_name, self.__port))
                     else:
@@ -264,14 +292,20 @@ class GXNet(IGXMedia):
                     self.__aThread = threading.Thread(target=self.__acceptThread)
                     self.__aThread.start()
                 else:
-                    self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_STREAM)
+                    self.__socket = socket.socket(
+                        self.__getInet(self.__host_name), socket.SOCK_STREAM
+                    )
                     self.__socket.connect((self.__host_name, self.__port))
             else:
-                self.__socket = socket.socket(self.__getInet(self.__host_name), socket.SOCK_DGRAM)
+                self.__socket = socket.socket(
+                    self.__getInet(self.__host_name), socket.SOCK_DGRAM
+                )
                 self.__socket.connect((self.__host_name, self.__port))
             self.__notifyMediaStateChange(MediaState.OPEN)
             if not self.server or self.protocol == NetworkType.UDP:
-                self.__thread = threading.Thread(target=self.__listenerThread, args=(self.__socket,))
+                self.__thread = threading.Thread(
+                    target=self.__listenerThread, args=(self.__socket,)
+                )
                 self.__thread.start()
         except Exception as e:
             self.close()
@@ -281,7 +315,7 @@ class GXNet(IGXMedia):
         if self.__socket:
             self.__notifyMediaStateChange(MediaState.CLOSING)
             try:
-                #This will fail if connection is closed on server side.
+                # This will fail if connection is closed on server side.
                 if self.__socket:
                     tmp = self.__socket
                     self.__socket = None
@@ -303,7 +337,7 @@ class GXNet(IGXMedia):
             except Exception:
                 pass
             self.__notifyMediaStateChange(MediaState.CLOSED)
-            self.__bytesSent = 0
+            self.__bytes_sent = 0
             self.__syncBase.resetReceivedSize()
 
     def isOpen(self):
@@ -311,6 +345,7 @@ class GXNet(IGXMedia):
 
     def __getProtocol(self):
         return self.__protocol
+
     def __setProtocol(self, value):
         if self.__protocol != value:
             self.__protocol = value
@@ -338,7 +373,6 @@ class GXNet(IGXMedia):
             self.__port = value
             self.__notifyPropertyChanged("port")
 
-
     port = property(__getPort, __setPort)
     """Port number."""
 
@@ -347,16 +381,16 @@ class GXNet(IGXMedia):
 
     def getBytesSent(self):
         """Sent byte count."""
-        return self.__bytesSent
+        return self.__bytes_sent
 
     def getBytesReceived(self):
         """Received byte count."""
-        return self.__bytesReceived
+        return self.__bytes_received
 
     def resetByteCounters(self):
         """Resets BytesReceived and BytesSent counters."""
-        self.__bytesSent = 0
-        self.__bytesReceived = 0
+        self.__bytes_sent = 0
+        self.__bytes_received = 0
 
     def getSettings(self):
         """Media settings as a XML string."""
@@ -381,11 +415,10 @@ class GXNet(IGXMedia):
         return sb
 
     def setSettings(self, value):
-        #Reset to default values.
+        # Reset to default values.
         self.__host_name = ""
         self.__port = 0
         self.__protocol = NetworkType.TCP
-
 
     def copy(self, target):
         self.__port = target.port
@@ -406,7 +439,7 @@ class GXNet(IGXMedia):
     def getSynchronous(self):
         return self.__lock
 
-    #pylint: disable=no-member
+    # pylint: disable=no-member
     def getIsSynchronous(self):
         return self.__lock.locked()
 
@@ -416,9 +449,9 @@ class GXNet(IGXMedia):
 
     def validate(self):
         if self.__port == 0:
-            raise Exception("Invalid port name.")
+            raise ValueError("Invalid port name.")
         if not self.hostName:
-            raise Exception("Invalid host name.")
+            raise ValueError("Invalid host name.")
 
     def __getEop(self):
         return self.__eop
@@ -427,18 +460,6 @@ class GXNet(IGXMedia):
         self.__eop = value
 
     eop = property(__getEop, __setEop)
-
-    def getReceiveDelay(self):
-        return self.__receiveDelay
-
-    def setReceiveDelay(self, value):
-        self.__receiveDelay = value
-
-    def getAsyncWaitTime(self):
-        return self.__asyncWaitTime
-
-    def setAsyncWaitTime(self, value):
-        self.__asyncWaitTime = value
 
     def __str__(self):
         if self.__protocol == NetworkType.TCP:

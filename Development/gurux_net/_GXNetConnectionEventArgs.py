@@ -31,10 +31,19 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
-from gurux_common.ReceiveEventArgs import ReceiveEventArgs
+
 
 # pylint: disable=too-few-public-methods
-class _NetReceiveEventArgs(ReceiveEventArgs):
-    def __init__(self, data=None, senderInfo=None, socket=None):
-        ReceiveEventArgs.__init__(self, data, senderInfo)
+class _GXNetConnectionEventArgs:
+    def __init__(self, senderInfo=None, socket=None):
+        """
+        Constructor.
+
+        data : Received data.
+        senderInfo : Sender information.
+        """
+        self.senderInformation = senderInfo
         self.socket = socket
+
+    def __str__(self):
+        return self.senderInformation

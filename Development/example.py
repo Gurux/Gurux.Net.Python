@@ -37,29 +37,31 @@ from gurux_common import IGXMediaListener
 from gurux_common.enums.TraceLevel import TraceLevel
 from gurux_net import GXNet
 from gurux_net.enums import NetworkType
+from gurux_net import IGXServerListener
+
+
 # ---------------------------------------------------------------------------
 # This example sends data to the server and waits reply.
 # ---------------------------------------------------------------------------
-#pylint: disable=no-self-argument
-class sampleclient(IGXMediaListener):
-
+# pylint: disable=no-self-argument, missing-class-docstring
+class sampleclient(IGXMediaListener, IGXServerListener):
     def __init__(self):
-        #Define End Of Packet char.
-        eop = 0x7e
-        #Make connection using TCP/IP to localhost.
-        #Use ::1 if you want to use IP v6 address.
+        # Define End Of Packet char.
+        eop = '\n'
+        # Make connection using TCP/IP to localhost.
+        # Use ::1 if you want to use IP v6 address.
         media = GXNet(NetworkType.TCP, "localhost", 0)
-        #Start to listen events from the media.
+        # Start to listen events from the media.
         media.addListener(self)
         print(str(media))
-        #Update port here to call onPropertyChanged event.
+        # Update port here to call onPropertyChanged event.
         media.port = 1000
-        #Show all traces.
+        # Show all traces.
         media.trace = TraceLevel.VERBOSE
-        #Set EOP for the media.
+        # Set EOP for the media.
         media.eop = eop
         try:
-            #Open the connection.
+            # Open the connection.
             media.open()
             r = ReceiveParameters()
             r.eop = eop
@@ -74,7 +76,7 @@ class sampleclient(IGXMediaListener):
                 media.send(eop)
                 ret = media.receive(r)
                 if ret:
-                    print(str(r.reply.decode("ascii")))
+                    print(str(r.reply))
                 else:
                     raise Exception("Failed to receive reply from the server.")
             ############################
@@ -130,5 +132,22 @@ class sampleclient(IGXMediaListener):
         """
         print("Property {!r} has hanged.".format(str(e)))
 
-if __name__ == '__main__':
+    def onClientConnected(self, sender, e):
+        """Media component sends notification,
+        when client connects to the server component.
+        sender : The source of the event.
+        e : Event arguments.
+        """
+        print("Client connected. " + str(e))
+
+    def onClientDisconnected(self, sender, e):
+        """Media component sends notification,
+        when client closes the connection to the server component.
+        sender : The source of the event.
+        e : Event arguments.
+        """
+        print("Client disconnected. " + str(e))
+
+
+if __name__ == "__main__":
     sampleclient()

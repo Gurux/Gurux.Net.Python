@@ -34,3 +34,5 @@
 from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
 from ._NetReceiveEventArgs import _NetReceiveEventArgs
 from .GXNet import GXNet
+from .IGXServerListener import IGXServerListener
+from ._GXNetConnectionEventArgs import _GXNetConnectionEventArgs
