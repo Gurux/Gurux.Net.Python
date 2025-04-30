@@ -29,6 +29,7 @@
     <Compile Include="gurux_net\enums\NetworkType.py" />
     <Compile Include="gurux_net\enums\__init__.py" />
     <Compile Include="gurux_net\GXNet.py" />
+    <Compile Include="gurux_net\_GXLocalizer.py" />
     <Compile Include="gurux_net\IGXServerListener.py" />
     <Compile Include="gurux_net\_GXSynchronousMediaBase.py" />
     <Compile Include="gurux_net\_GXNetConnectionEventArgs.py" />

@@ -7,8 +7,8 @@
 #  Filename: $HeadURL$
 #
 #  Version: $Revision$,
-#                   $Date$
-#                   $Author$
+#                $Date$
+#                $Author$
 #
 #  Copyright (c) Gurux Ltd
 #
@@ -31,9 +31,36 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
-from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
-from ._NetReceiveEventArgs import _NetReceiveEventArgs
-from .GXNet import GXNet
-from .IGXServerListener import IGXServerListener
-from ._GXNetConnectionEventArgs import _GXNetConnectionEventArgs
-from ._GXLocalizer import _GXLocalizer
+import gettext
+import os
+from collections.abc import Iterable
+
+# This class is used to localize the texts.
+class _GXLocalizer:
+    #Used language.
+    __lang = None
+
+    # Return localized value.
+    @staticmethod
+    def gettext(value):
+        try:
+            if _GXLocalizer.__lang:
+                return _GXLocalizer.__lang.gettext(value)
+        except Exception:
+            pass
+        #Return default value if language is not available.
+        return value
+
+    @staticmethod
+    def init(lang_code):
+        try:
+            if isinstance(lang_code, Iterable) and not isinstance(lang_code, (str, bytes)):
+                if "_" in lang_code[0]:
+                    lang_code = lang_code[0].split('_')[0]
+            locale_path = os.path.join(os.path.dirname(__file__), "locale")
+            _GXLocalizer.__lang = gettext.translation(
+                "gurux_net", localedir=locale_path, languages=[lang_code], fallback=True
+            )
+            _GXLocalizer.__lang.install()
+        except Exception:
+            pass

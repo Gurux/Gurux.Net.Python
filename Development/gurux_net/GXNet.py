@@ -45,7 +45,7 @@ from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
 from ._NetReceiveEventArgs import _NetReceiveEventArgs
 from .IGXServerListener import IGXServerListener
 from ._GXNetConnectionEventArgs import _GXNetConnectionEventArgs
-
+from ._GXLocalizer import _GXLocalizer
 
 # pylint: disable=too-many-public-methods, too-many-instance-attributes
 class GXNet(IGXMedia):
@@ -416,7 +416,7 @@ class GXNet(IGXMedia):
 
     def setSettings(self, value):
         # Reset to default values.
-        self.__host_name = ""
+        self.__host_name = None
         self.__port = 0
         self.__protocol = NetworkType.TCP
 
@@ -432,6 +432,11 @@ class GXNet(IGXMedia):
         else:
             tmp += "TCP/IP"
         return tmp
+
+    #Localize error messages.
+    @staticmethod
+    def localize(lang_code):
+        _GXLocalizer.init(lang_code)
 
     def getMediaType(self):
         return "Net"
@@ -449,9 +454,9 @@ class GXNet(IGXMedia):
 
     def validate(self):
         if self.__port == 0:
-            raise ValueError("Invalid port name.")
+            raise ValueError(_GXLocalizer.gettext("Invalid port."))
         if not self.hostName:
-            raise ValueError("Invalid host name.")
+            raise ValueError(_GXLocalizer.gettext("Invalid host name."))
 
     def __getEop(self):
         return self.__eop
@@ -467,7 +472,7 @@ class GXNet(IGXMedia):
         else:
             tmp = "UDP "
         if self.server:
-            tmp = tmp + "Server "
+            tmp = tmp + _GXLocalizer.gettext("Server") + " "
         if self.__host_name:
             tmp = tmp + self.__host_name
         elif self.server:

@@ -7,8 +7,8 @@
 #  Filename: $HeadURL$
 #
 #  Version: $Revision$,
-#                   $Date$
-#                   $Author$
+#                $Date$
+#                $Author$
 #
 #  Copyright (c) Gurux Ltd
 #
@@ -31,9 +31,27 @@
 #  This code is licensed under the GNU General Public License v2.
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
-from ._GXSynchronousMediaBase import _GXSynchronousMediaBase
-from ._NetReceiveEventArgs import _NetReceiveEventArgs
-from .GXNet import GXNet
-from .IGXServerListener import IGXServerListener
-from ._GXNetConnectionEventArgs import _GXNetConnectionEventArgs
-from ._GXLocalizer import _GXLocalizer
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-04-30 14:50+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: GXNet.py:457
+msgid "Invalid port."
+msgstr "Virheellinen portti."
+
+#: GXNet.py:459
+msgid "Invalid host name."
+msgstr "Virheellinen isäntänimi."
+
+#: GXNet.py:475
+msgid "Server"
+msgstr "Palvelin"

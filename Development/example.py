@@ -32,6 +32,7 @@
 #  Full text may be retrieved at http://www.gnu.org/licenses/gpl-2.0.txt
 # ---------------------------------------------------------------------------
 import time
+import locale
 from gurux_common import ReceiveParameters
 from gurux_common import IGXMediaListener
 from gurux_common.enums.TraceLevel import TraceLevel
@@ -150,4 +151,6 @@ class sampleclient(IGXMediaListener, IGXServerListener):
 
 
 if __name__ == "__main__":
+    #Localize GXNet
+    GXNet.localize(locale.getdefaultlocale())   
     sampleclient()
