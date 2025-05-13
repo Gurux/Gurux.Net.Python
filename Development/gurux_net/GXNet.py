@@ -219,7 +219,7 @@ class GXNet(IGXMedia):
     def __listenerThread(self, s):
         while self.__socket and s:
             try:
-                data = s.recv(1000)
+                data = s.recv(1500)
                 if data:
                     # Convert data to bytearray because 2.7 handles bytes as a
                     # string.
@@ -326,13 +326,14 @@ class GXNet(IGXMedia):
                 pass
             try:
                 if self.__thread:
-                    self.__thread.join()
+                    #Wait 5 seconds thread to close.
+                    self.__thread.join(timeout=5)
                     self.__thread = None
             except Exception:
                 pass
             try:
                 if self.__aThread:
-                    self.__aThread.join()
+                    self.__aThread.join(timeout=5)
                     self.__aThread = None
             except Exception:
                 pass

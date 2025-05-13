@@ -54,7 +54,7 @@ class build_py_with_mo(_build_py):
 
 setup(
     name="gurux_net",
-    version="1.0.22",
+    version="1.0.23",
     author="Gurux Ltd",
     author_email="gurux@gurux.fi",
     description="Gurux network media is used to commmunication with TCP/IP or UDP connections.",
